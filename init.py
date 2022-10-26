@@ -33,3 +33,12 @@ with connection.cursor() as cursor:
 	cursor.execute('CREATE TABLE IF NOT EXISTS equipment_configurations (equipment INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), path TEXT NOT NULL, commit TEXT NOT NULL, CONSTRAINT configuration PRIMARY KEY (equipment,date), FOREIGN KEY (equipment) REFERENCES equipments(e_id) ON DELETE CASCADE)')
 
 	cursor.execute('CREATE TABLE IF NOT EXISTS equipment_links (equipment_from INT NOT NULL, equipment_to INT NOT NULL, CONSTRAINT link PRIMARY KEY (equipment_from,equipment_to), FOREIGN KEY (equipment_from) REFERENCES equipments(e_id) ON DELETE CASCADE, FOREIGN KEY (equipment_to) REFERENCES equipments(e_id) ON DELETE CASCADE)')
+
+	cursor.execute('CREATE OR REPLACE PROCEDURE pushFirmware (equipment_p INT, member_p INT, path_p TEXT, commit_p TEXT) BEGIN DECLARE utime INT; SET utime = UNIX_TIMESTAMP(); INSERT INTO equipment_service (equipment, member, date, commit) VALUES (equipment_p, member_p, utime, \'Update firmware\'); INSERT INTO equipment_firmwares (equipment, date, path, commit) VALUES (equipment_p, utime, path_p, commit_p); END;')
+
+
+	cursor.execute('CREATE OR REPLACE PROCEDURE pushConfiguration (equipment_p INT, member_p INT, path_p TEXT, commit_p TEXT) BEGIN DECLARE utime INT; SET utime = UNIX_TIMESTAMP(); INSERT INTO equipment_service (equipment, member, date, commit) VALUES (equipment_p, member_p, utime, \'Update Configuration\'); INSERT INTO equipment_firmwares (equipment, date, path, commit) VALUES (equipment_p, utime, path_p, commit_p); END;')
+
+	cursor.execute('CREATE OR REPLACE PROCEDURE addEquipment (premise_p INT, type_p INT, name_p TEXT, description_p TEXT, address_p INT, member_p INT) BEGIN DECLARE utime INT; DECLARE equipment_p INT; SET utime = UNIX_TIMESTAMP(); SELECT AUTO_INCREMENT+1 INTO equipment_p FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\'equipments\'; INSERT INTO equipments (e_id, premise, type, date, name, description, address) VALUES (equipment_p, premise_p, type_p, utime, name_p, description_p, address_p); INSERT INTO equipment_service (equipment, member, date, commit) VALUES (equipment_p, member_p, utime, \'Install equipment\'); END;')
+		
+		
