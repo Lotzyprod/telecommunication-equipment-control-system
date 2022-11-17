@@ -15,12 +15,11 @@ except mariadb.Error as e:
 	print(f'{now} Cant connect to the database with reason: {e}')
 	sys.exit(1)
 
-
 with connection.cursor() as cursor:
 	cursor.execute('CREATE TABLE IF NOT EXISTS companies (c_id INT NOT NULL AUTO_INCREMENT, address TEXT NOT NULL, name TEXT NOT NULL, description TEXT, CONSTRAINT c_id PRIMARY KEY (c_id))')
 	cursor.execute('CREATE TABLE IF NOT EXISTS company_premises (p_id INT NOT NULL AUTO_INCREMENT, company INT NOT NULL, name TEXT NOT NULL, description TEXT, CONSTRAINT p_id PRIMARY KEY (p_id), FOREIGN KEY (company) REFERENCES companies(c_id) ON DELETE CASCADE)')
-	cursor.execute('CREATE TABLE IF NOT EXISTS company_members (m_id INT NOT NULL AUTO_INCREMENT, company INT NOT NULL, name TEXT NOT NULL, surname TEXT NOT NULL, patronymic TEXT, password TEXT, permissions INT NOT NULL, CONSTRAINT m_id PRIMARY KEY (m_id), FOREIGN KEY (company) REFERENCES companies(c_id) ON DELETE CASCADE)')
-
+	cursor.execute('CREATE TABLE IF NOT EXISTS company_members (m_id INT NOT NULL AUTO_INCREMENT, company INT NOT NULL, name TEXT NOT NULL, surname TEXT NOT NULL, patronymic TEXT, password TEXT, permissions INT, CONSTRAINT m_id PRIMARY KEY (m_id), FOREIGN KEY (company) REFERENCES companies(c_id) ON DELETE CASCADE, FOREIGN KEY (permissions) REFERENCES company_permissions(cp_id) ON DELETE SET NULL)')
+	cursor.execute('CREATE TABLE IF NOT EXISTS company_permissions (cp_id INT NOT NULL AUTO_INCREMENT, company INT NOT NULL, name TEXT NOT NULL, description TEXT, CONSTRAINT permission PRIMARY KEY (cp_id,company), FOREIGN KEY (company) REFERENCES companies(c_id) ON DELETE CASCADE)')
 	cursor.execute('CREATE TABLE IF NOT EXISTS equipment_types (t_id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, CONSTRAINT t_id PRIMARY KEY (t_id))')
 
 	cursor.execute('CREATE TABLE IF NOT EXISTS local_addresses (la_id INT NOT NULL AUTO_INCREMENT, public_address INT NOT NULL, address CHAR(15) NOT NULL, CONSTRAINT local_address PRIMARY KEY (la_id))')
