@@ -1,0 +1,10 @@
+mariadb:
+  host: localhost
+  user: esystemadmin
+  password: esystempassword
+  database: esystem
+  port: 3306
+
+admin:
+  login: admin
+  password: admin

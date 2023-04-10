@@ -1,0 +1,4 @@
+create database esystem;
+CREATE USER esystemadmin@localhost IDENTIFIED BY 'esystempassword';
+grant all privileges on *.* TO 'esystemadmin'@'localhost' identified by 'esystempassword';
+flush privileges;
