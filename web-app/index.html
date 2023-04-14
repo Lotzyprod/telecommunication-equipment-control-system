@@ -97,6 +97,11 @@
     padding: 5px;
     margin-bottom: 5px;
   }
+  .rectangle .unchangeble-field {
+    background-color: #fff;
+    padding: 5px;
+    margin-bottom: 5px;
+  }
   .rectangle .field-select {
     background-color: #fff;
     padding: 5px;
@@ -161,7 +166,6 @@
 <body>
 </body>
 <script>
-let host = null;
 const system_items = {
   "permissions": {
     "category_name": "Права",
@@ -171,8 +175,8 @@ const system_items = {
     "change-permission": "permissions.change",
     "id-field": true,
     "fields": {
-        "value": {"name":"Значение:","required":true,"reference":null,"visible":true,"input":true},
-        "description": {"name":"Описание:","required":false,"reference":null,"visible":true, "input":true}
+        "value": {"name":"Значение:","required":true,"reference":null,"input":true},
+        "description": {"name":"Описание:","reference":null, "input":true}
       }
   },
   "groups": {
@@ -183,8 +187,8 @@ const system_items = {
     "change-permission": "groups.change",
     "id-field": true,
     "fields": {
-        "name": {"name":"Название:","required":true,"reference":null,"visible":true,"input":true},
-        "description": {"name":"Описание:","required":false,"reference":null,"visible":true, "input":true}
+        "name": {"name":"Название:","required":true,"reference":null,"input":true},
+        "description": {"name":"Описание:","reference":null, "input":true}
     }
   },
   "members": {
@@ -195,12 +199,12 @@ const system_items = {
     "change-permission": "members.change",
     "id-field": true,
     "fields": {
-        "login": {"name":"Никнейм:","required":true,"reference":null,"visible":true,"input":true},
-        "password": {"name":"Пароль:","required":true,"reference":null,"visible":false, "input":true},
-        "groups": {"name":"Группа:","required":false,"reference":["groups","name"],"visible":true, "input":true},
-        "name": {"name":"Имя:","required":false,"reference":null,"visible":true, "input":true},
-        "surname": {"name":"Фамилия:","required":false,"reference":null,"visible":true, "input":true},
-        "patronymic": {"name":"Отчество:","required":false,"reference":null,"visible":true, "input":true}
+        "login": {"name":"Никнейм","required":true,"reference":null,"input":true},
+        "password": {"name":"Пароль","required":true,"reference":null,"invisible":true, "input":true},
+        "groups": {"name":"Группа","reference":["groups","name"], "input":true},
+        "name": {"name":"Имя","reference":null, "input":true},
+        "surname": {"name":"Фамилия","reference":null, "input":true},
+        "patronymic": {"name":"Отчество","reference":null, "input":true}
     }
   },
   "premises": {
@@ -211,8 +215,8 @@ const system_items = {
     "change-permission": "premises.change",
     "id-field": true,
     "fields": {
-        "name": {"name":"Название:","required":true,"reference":null,"visible":true,"input":true},
-        "description": {"name":"Описание:","required":false,"reference":null,"visible":true, "input":true}
+        "name": {"name":"Название","required":true,"reference":null,"input":true},
+        "description": {"name":"Описание","reference":null, "input":true}
     }
   },
   "equipment/types": {
@@ -223,8 +227,8 @@ const system_items = {
     "change-permission": "equipments.change",
     "id-field": true,
     "fields": {
-        "name": {"name":"Название:","required":true,"reference":null,"visible":true,"input":true},
-        "description": {"name":"Описание:","required":false,"reference":null,"visible":true, "input":true}
+        "name": {"name":"Название","required":true,"reference":null,"input":true},
+        "description": {"name":"Описание","reference":null, "input":true}
     }
   },
   "equipments": {
@@ -235,12 +239,12 @@ const system_items = {
     "change-permission": "equipments.change",
     "id-field": true,
     "fields": {
-        "premise": {"name":"Помещение:","required":false,"reference":["premises","name"],"visible":true,"input":true},
-        "type": {"name":"Тип:","required":true,"reference":["equipment/types","name"],"visible":true, "input":true},
-        "date": {"name":"Дата установки:","required":false,"reference":null,"visible":false,"input":false},
-        "name": {"name":"Название:","required":true,"reference":null,"visible":true,"input":true},
-        "description": {"name":"Описание:","required":false,"reference":null,"visible":true, "input":true},
-        "address": {"name":"IP адрес:","required":false,"reference":null,"visible":true, "input":true}
+        "premise": {"name":"Помещение","reference":["premises","name"],"input":true},
+        "type": {"name":"Тип","required":true,"reference":["equipment/types","name"], "input":true},
+        "date": {"name":"Дата установки","reference":null,"invisible":true,"input":false},
+        "name": {"name":"Название","required":true,"reference":null,"input":true},
+        "description": {"name":"Описание","reference":null, "input":true},
+        "address": {"name":"IP адрес","reference":null, "input":true}
     }
   }
 };
@@ -251,6 +255,8 @@ async function createLoginForm() {
   document.body.innerHTML = '<div id="login-form-container">'+
                               '<form id="login-form">'+
                                 '<h1 class="login-form-title">Вход</h1>'+
+                                '<label class="login-form-label" for="username">Имя хоста:</label>'+
+                                '<input id="login-form-host" class="login-form-input" type="text" id="host" name="login" required>'+
                                 '<label class="login-form-label" for="username">Имя пользователя:</label>'+
                                 '<input id="login-form-username" class="login-form-input" type="text" id="username" name="login" required>'+
                                 '<label class="login-form-label" for="password">Пароль:</label>'+
@@ -263,14 +269,18 @@ async function createLoginForm() {
     event.preventDefault();
     login = document.getElementById("login-form-username").value;
     password = document.getElementById("login-form-password").value;
+    host = document.getElementById("login-form-host").value;
     response = await fetch(`${host}/auth?login=${login}&password=${password}`, {method: "GET"});
     if (response.ok) {
       response = await response.json();
       localStorage.setItem('access-token',response['token']);
+      localStorage.setItem('host',host);
       user_permissions = await getUserPermissions();
       await createMenu();
-    } else {
+    } else if ((response.status) == 401) {
       document.getElementById("login-form-output").innerHTML = response['message'];
+    } else {
+      document.getElementById("login-form-output").innerHTML = 'Неверное имя хоста';
     }
   });
 }
@@ -281,7 +291,7 @@ async function createMenu() {
                             '<div id="rectangle-container"></div>'+
                             '<div id="add-form-container"></div>';
   
-  response = await fetch(host+'/me/permissions', {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+  response = await fetch(`${localStorage.getItem('host')}/me/permissions`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
   if (response.status == 200) {
     response = await response.json();
     menu = [];
@@ -304,7 +314,7 @@ function logout() {
   createLoginForm();
 }
 async function getUserPermissions() {
-  let response = await fetch(host+'/me/permissions', {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+  let response = await fetch(`${localStorage.getItem('host')}/me/permissions`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
   if (response.status == 200) {
       response = await response.json();
       response = response['items'];
@@ -321,7 +331,7 @@ async function createItemsContainer(category) {
   localStorage.setItem('last-category',category);
   user_permissions = await getUserPermissions();
   document.getElementById('rectangle-container').innerHTML = '';
-  response = await fetch(`${host}/${category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+  response = await fetch(`${localStorage.getItem('host')}/${category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
   if (response.ok) {
     response = await response.json();
     items = response['items'];
@@ -338,12 +348,12 @@ async function createItemsContainer(category) {
     for (key in fields) {
       if (fields[key]['input']) {
         required = fields[key]['required'] ? 'required' : '';
-        hidden = fields[key]['visible'] ? '' : 'style="display: none;"';
+        hidden = fields[key]['ininvisible'] ? 'style="display: none;"' : '';
         name = fields[key]['name'];
         if (!!(fields[key]['reference'])) {
           ref_category = fields[key]['reference'][0];
           ref_field = fields[key]['reference'][1];
-          response = await fetch(`${host}/${ref_category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+          response = await fetch(`${localStorage.getItem('host')}/${ref_category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
           if (response.ok) {
             form.push(`<label class="add-form-label" for="${key}-input">${name}</label><select class="add-form-select" ${hidden} id="${key}-input" ${required}>`);
             response = await response.json();
@@ -372,12 +382,12 @@ async function createRectangle(category,item) {
   format = system_items[category]['fields'];
   fields = '';
   for(key in format) {
-    hidden = format[key]['visible'] ? '' : 'style="display: none;"';
+    hidden = format[key]['invisible'] ? 'style="display: none;"' : '';
     name = format[key]['name'];
     if (!!(format[key]['reference'])) {
       ref_category = format[key]['reference'][0];
       ref_field = format[key]['reference'][1];
-      response = await fetch(`${host}/${ref_category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+      response = await fetch(`${localStorage.getItem('host')}/${ref_category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
       if (response.ok) {
         fields+=`<label ${hidden}>${name}</label></br><select onChange="editSelect('${category}','${key}${id}')" class="field-select" ${hidden} id="${key}${id}">`;
         response = await response.json();
@@ -427,8 +437,7 @@ async function createObject(category) {
   }
   item['id'] = 0;
   data =  JSON.stringify(item);
-  console.log(data);
-  response = await fetch(`${host}/${category}/`, {method: "POST",headers: {"accept": "application/json","Content-Type": "application/json","token":localStorage.getItem('access-token')},body: data});
+  response = await fetch(`${localStorage.getItem('host')}/${category}/`, {method: "POST",headers: {"accept": "application/json","Content-Type": "application/json","token":localStorage.getItem('access-token')},body: data});
   if (response.ok) {
     response = await response.json();
     item['id'] = response['id'];
@@ -440,7 +449,7 @@ async function createObject(category) {
   }
 }
 async function deleteObject(category,id) {
- response = await fetch(`${host}/${category}/${id}`, {method: "DELETE",headers: {"token":localStorage.getItem('access-token')}});
+ response = await fetch(`${localStorage.getitem('host')}/${category}/${id}`, {method: "DELETE",headers: {"token":localStorage.getItem('access-token')}});
   if (response.ok) {
     const rectangle = document.getElementById(id);
     document.getElementById("rectangle-container").removeChild(rectangle);
@@ -478,7 +487,7 @@ async function editField(category,fieldId) {
       }
       item['id'] = id;
       data =  JSON.stringify(item);
-      response = await fetch(`${host}/${category}/`, {method: "PATCH",headers: {"accept": "application/json","Content-Type": "application/json","token":localStorage.getItem('access-token')},body: data});
+      response = await fetch(`${localStorage.getItem('host')}/${category}/`, {method: "PATCH",headers: {"accept": "application/json","Content-Type": "application/json","token":localStorage.getItem('access-token')},body: data});
       if (!response.ok)
         field.textContent = oldValue;
       inputElem.remove();
@@ -500,10 +509,60 @@ async function editSelect(category, fieldId) {
   }
   item['id'] = id;
   data =  JSON.stringify(item);
-  response = await fetch(`${host}/${category}/`, {method: "PATCH",headers: {"accept": "application/json","Content-Type": "application/json","token":localStorage.getItem('access-token')},body: data});
+  response = await fetch(`${localStorage.getItem('host')}/${category}/`, {method: "PATCH",headers: {"accept": "application/json","Content-Type": "application/json","token":localStorage.getItem('access-token')},body: data});
 }
-async function main(address) {
-  host = address;
+async function exportCategory(category) {
+  tableheader = [];
+  fields = system_items[category]['fields'];
+  if (system_items[category]['id-field'])
+    tableheader.push('id');
+  for (key in fields)
+    if (!fields[key]['invisible'])
+      tableheader.push(fields[key]['name']);
+  tableheader = '<tr><th>'+tableheader.join('</th><th>')+'</th></tr>';
+  tablebody = [];
+
+  response = await fetch(`${localStorage.getItem('host')}/${category}/?limit=999&offset=0`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+  if (response.ok) {
+    response = await response.json();
+    items = response['items'];
+    for(item in items) {
+      row = []
+      if (system_items[category]['id-field'])
+        row.push(items[item]['id']);
+      for (key in fields)
+        if (!fields[key]['invisible'])
+          if (!!(format[key]['reference'])) {
+            ref_category = fields[key]['reference'][0];
+            ref_field = fields[key]['reference'][1];
+            ref_response = await fetch(`${localStorage.getItem('host')}/${ref_category}/${items[item][key]}`, {method: "GET",headers: {"token":localStorage.getItem('access-token')}});
+            if (ref_response.ok) {
+              ref_response = await ref_response.json();
+              row.push(ref_response[ref_field]);
+            } else {
+              row.push(items[item][key]);
+            }
+          } else {
+            row.push(items[item][key]);
+          }
+      tablebody.push('<tr><td>'+row.join('</td><td>')+'</td></tr>');
+    }
+    tablebody = tablebody.join('');
+    table = '<table border="1">'+tableheader+tablebody+'</table>';
+    filename = category+'_'+new Date().toJSON().slice(0, 16)+'.html';
+    createFile(filename,table);
+  }
+}
+function createFile(filename,text) {
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('download', filename);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+}
+async function main() {
   if (localStorage.getItem('access-token')==undefined) { 
     await createLoginForm();
   } else {
@@ -514,6 +573,6 @@ async function main(address) {
       await createItemsContainer(category);
   }
 }
-main('http://localhost:8000');
+main();
 </script>
 </html>

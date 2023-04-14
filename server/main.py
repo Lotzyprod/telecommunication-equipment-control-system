@@ -2,6 +2,7 @@ from fastapi import FastAPI, Header
 from fastapi.responses import JSONResponse
 import mariadb, yaml, models
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 class System(FastAPI):
 	def __init__(self,config):
@@ -16,46 +17,7 @@ class System(FastAPI):
 		    allow_methods=["*"],
 		    allow_headers=["*"],
 		)
-
-		with self.cursor() as cursor:
-			login,password = self.config['admin']['login'],self.config['admin']['password']
-			cursor.execute('CREATE TABLE IF NOT EXISTS permissions (id INT NOT NULL AUTO_INCREMENT, value TEXT NOT NULL UNIQUE, description TEXT, PRIMARY KEY (id))')
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('permissions.add','Добавить новое право'),('permissions.remove','Удалить право'),('permissions.change','Изменить право'),('permissions.view','Просмотр прав') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('groups.add','Добавить новую группу'),('groups.remove','Удалить группу'),('groups.change','Изменить группу'),('groups.view','Просмотр групп') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('members.add','Создать нового пользователя'),('members.remove','Удалить пользователя'),('members.change','Изменить пользователя'),('members.view','Просмотр пользователей') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('premises.add','Добавить новое помещение'),('premises.remove','Удалить помещение'),('premises.change','Изменить помещение'),('premises.view','Просмотр помещений') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('addresses.add','Добавить новый адрес'),('addresses.remove','Удалить адрес'),('addresses.change','Изменить адрес'),('addresses.view','Просмотр адресов') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('equipments.add','Добавить новые оборудование'),('equipments.remove','Удалить оборудование'),('equipments.change','Изменить оборудование'),('equipments.view','Просмотр оборудования') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('equipment_firmwares.add','Добавить новую прошивку'),('equipment_firmwares.remove','Удалить прошивку'),('equipment_firmwares.change','Изменить прошивку'),('equipment_firmwares.view','Просмотр прошивок') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('equipment_configurations.add','Добавить новую конфигурацию'),('equipment_configurations.remove','Удалить конфигурацию'),('equipment_configurations.change','Изменить конфигурацию'),('equipment_configurations.view','Просмотр конфигураций') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('equipment_links.add','Добавить новую физическую связь'),('equipment_links.remove','Удалить физическую связь'),('equipment_links.change','Изменить физическую связь'),('equipment_links.view','Просмотр физических связей') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-			cursor.execute("INSERT INTO permissions (value,description) VALUES('equipments_service.view','Просмотр изменений в оборудовании') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
-
-			cursor.execute('CREATE TABLE IF NOT EXISTS groups (id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, PRIMARY KEY(id))')
-			cursor.execute("INSERT INTO groups (id,name,description) VALUES(-1,'Администратор','Все возможные права') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
-			cursor.execute("INSERT INTO groups (id,name,description) VALUES(1,'Техник','Возможность просмотра оборудования, добавления. Изменение конфигурации, прошивки, просмотр и создание физических связей') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
-			cursor.execute("INSERT INTO groups (id,name,description) VALUES(2,'Системный админ','Возможность просмотра оборудования. Изменение конфигурации, просмотр и создание логических связей') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
-			cursor.execute("INSERT INTO groups (id,name,description) VALUES(3,'Руководитель','Просмотр изменений в оборудовании') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
-			cursor.execute('CREATE TABLE if NOT EXISTS groups_permissions (groups INT NOT NULL, permission INT NOT NULL, PRIMARY KEY(groups,permission), FOREIGN KEY (groups) REFERENCES groups(id) ON DELETE CASCADE, FOREIGN KEY (permission) REFERENCES permissions(id) ON DELETE CASCADE)')
-			cursor.execute('INSERT INTO groups_permissions (groups, permission) SELECT -1,p.id FROM permissions AS p ON DUPLICATE KEY UPDATE groups=VALUES(groups), permission=VALUES(permission)')
-			
-			cursor.execute('CREATE TABLE IF NOT EXISTS members (id INT NOT NULL AUTO_INCREMENT,login TEXT NOT NULL UNIQUE, password TEXT, groups INT, name TEXT, surname TEXT, patronymic TEXT, PRIMARY KEY (id), FOREIGN KEY (groups) REFERENCES groups(id) ON DELETE SET NULL)')
-			cursor.execute("INSERT INTO members (id,password,login,groups) VALUES(-1,SHA2(CONCAT(?,?),256),?,-1) ON DUPLICATE KEY UPDATE id = VALUES(id), password = VALUES(password), login = VALUES(login), groups = VALUES(groups)",(login,password,login,))
-
-			cursor.execute('CREATE TABLE IF NOT EXISTS premises (id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, PRIMARY KEY (id))')
-
-			cursor.execute('CREATE TABLE IF NOT EXISTS public_addresses (id INT NOT NULL AUTO_INCREMENT, address CHAR(15) UNIQUE, PRIMARY KEY (id))')
-			cursor.execute('CREATE TABLE IF NOT EXISTS local_addresses (id INT NOT NULL AUTO_INCREMENT, public_address INT NOT NULL, address CHAR(15) NOT NULL, PRIMARY KEY (id))')
-			
-			cursor.execute('CREATE TABLE IF NOT EXISTS equipment_types (id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, PRIMARY KEY (id))')
-			cursor.execute('CREATE TABLE IF NOT EXISTS equipments (id INT NOT NULL AUTO_INCREMENT, premise INT NOT NULL, type INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), name TEXT NOT NULL, description TEXT, address INT, PRIMARY KEY (id), FOREIGN KEY (premise) REFERENCES premises(id) ON DELETE CASCADE, FOREIGN KEY (type) REFERENCES equipment_types(id) ON DELETE CASCADE, FOREIGN KEY (address) REFERENCES local_addresses(id) ON DELETE SET NULL)')
-
-			cursor.execute('CREATE TABLE IF NOT EXISTS equipment_service (equipment INT NOT NULL, member INT, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), commit TEXT NOT NULL, PRIMARY KEY (equipment,date), FOREIGN KEY (member) REFERENCES members(id) ON DELETE SET NULL, FOREIGN KEY (equipment) REFERENCES equipments(id) ON DELETE CASCADE)')
-			cursor.execute('CREATE TABLE IF NOT EXISTS equipment_firmwares (equipment INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), path TEXT NOT NULL, commit TEXT NOT NULL, CONSTRAINT firmware PRIMARY KEY (equipment,date), FOREIGN KEY (equipment) REFERENCES equipments(id) ON DELETE CASCADE)')
-			cursor.execute('CREATE TABLE IF NOT EXISTS equipment_configurations (equipment INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), path TEXT NOT NULL, commit TEXT NOT NULL, PRIMARY KEY (equipment,date), FOREIGN KEY (equipment) REFERENCES equipments(id) ON DELETE CASCADE)')
-
-			cursor.execute('CREATE TABLE IF NOT EXISTS equipment_links (equipment_from INT NOT NULL, equipment_to INT NOT NULL, PRIMARY KEY (equipment_from,equipment_to), FOREIGN KEY (equipment_from) REFERENCES equipments(id) ON DELETE CASCADE, FOREIGN KEY (equipment_to) REFERENCES equipments(id) ON DELETE CASCADE)')
-
+		self.init_tables()
 		@self.get("/auth", response_model=models.Token, responses={401:{"model": models.Message}})
 		async def auth(login: str, password: str):
 		    with self.cursor() as cursor:
@@ -635,6 +597,87 @@ class System(FastAPI):
 		return self.connection.cursor()
 	def reconnect(self):
 		self.connection = mariadb.connect(**self.config['mariadb'], autocommit=True)
+	def init_tables(self, insert_values: bool = True):
+		with self.cursor() as cursor:
+			cursor.execute('show tables')
+			tables = [table[0] for table in cursor.fetchall()]
+
+			login,password = self.config['admin']['login'],self.config['admin']['password']
+			if 'permissions' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS permissions (id INT NOT NULL AUTO_INCREMENT, value TEXT NOT NULL UNIQUE, description TEXT, PRIMARY KEY (id))')
+				if insert_values:
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('permissions.add','Добавить новое право'),('permissions.remove','Удалить право'),('permissions.change','Изменить право'),('permissions.view','Просмотр прав') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('groups.add','Добавить новую группу'),('groups.remove','Удалить группу'),('groups.change','Изменить группу'),('groups.view','Просмотр групп') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('members.add','Создать нового пользователя'),('members.remove','Удалить пользователя'),('members.change','Изменить пользователя'),('members.view','Просмотр пользователей') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('premises.add','Добавить новое помещение'),('premises.remove','Удалить помещение'),('premises.change','Изменить помещение'),('premises.view','Просмотр помещений') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('addresses.add','Добавить новый адрес'),('addresses.remove','Удалить адрес'),('addresses.change','Изменить адрес'),('addresses.view','Просмотр адресов') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('equipments.add','Добавить новые оборудование'),('equipments.remove','Удалить оборудование'),('equipments.change','Изменить оборудование'),('equipments.view','Просмотр оборудования') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('equipment_firmwares.add','Добавить новую прошивку'),('equipment_firmwares.remove','Удалить прошивку'),('equipment_firmwares.change','Изменить прошивку'),('equipment_firmwares.view','Просмотр прошивок') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('equipment_configurations.add','Добавить новую конфигурацию'),('equipment_configurations.remove','Удалить конфигурацию'),('equipment_configurations.change','Изменить конфигурацию'),('equipment_configurations.view','Просмотр конфигураций') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('equipment_links.add','Добавить новую физическую связь'),('equipment_links.remove','Удалить физическую связь'),('equipment_links.change','Изменить физическую связь'),('equipment_links.view','Просмотр физических связей') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+					cursor.execute("INSERT INTO permissions (value,description) VALUES('equipments_service.view','Просмотр изменений в оборудовании') ON DUPLICATE KEY UPDATE value = VALUES(value), description = VALUES(description)")
+			if 'groups' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS groups (id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, PRIMARY KEY(id))')
+				if insert_values:
+					cursor.execute("INSERT INTO groups (id,name,description) VALUES(-1,'Администратор','Все возможные права') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
+					cursor.execute("INSERT INTO groups (id,name,description) VALUES(1,'Техник','Возможность просмотра оборудования, добавления. Изменение конфигурации, прошивки, просмотр и создание физических связей') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
+					cursor.execute("INSERT INTO groups (id,name,description) VALUES(2,'Системный админ','Возможность просмотра оборудования. Изменение конфигурации, просмотр и создание логических связей') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
+					cursor.execute("INSERT INTO groups (id,name,description) VALUES(3,'Руководитель','Просмотр изменений в оборудовании') ON DUPLICATE KEY UPDATE id = VALUES(id), name = VALUES(name), description = VALUES(description)")
+			if 'groups_permissions' not in tables:
+				cursor.execute('CREATE TABLE if NOT EXISTS groups_permissions (groups INT NOT NULL, permission INT NOT NULL, PRIMARY KEY(groups,permission), FOREIGN KEY (groups) REFERENCES groups(id) ON DELETE CASCADE, FOREIGN KEY (permission) REFERENCES permissions(id) ON DELETE CASCADE)')
+				if insert_values:
+					cursor.execute('INSERT INTO groups_permissions (groups, permission) SELECT -1,p.id FROM permissions AS p ON DUPLICATE KEY UPDATE groups=VALUES(groups), permission=VALUES(permission)')
+					cursor.execute("INSERT INTO groups_permissions (groups, permission) SELECT 1,p.id FROM permissions AS p WHERE p.value in ('equipments.view','equipments.add','equipments.remove','equipments.change','equipment_firmwares.view','equipment_firmwares.add','equipment_firmwares.remove','equipment_firmwares.change','equipment_links.view','equipment_links.add','equipment_links.remove','equipment_links.change','equipment_service.view') ON DUPLICATE KEY UPDATE groups=VALUES(groups), permission=VALUES(permission)")
+					cursor.execute("INSERT INTO groups_permissions (groups, permission) SELECT 2,p.id FROM permissions AS p WHERE p.value in ('equipments.view','equipments.change','equipment_configurations.view','equipment_configurations.add','equipment_configurations.remove','equipment_configurations.change','addresses.view','addresses.add','addresses.remove','addresses.change','equipment_service.view') ON DUPLICATE KEY UPDATE groups=VALUES(groups), permission=VALUES(permission)")
+					cursor.execute("INSERT INTO groups_permissions (groups, permission) SELECT 3,p.id FROM permissions AS p WHERE p.value in ('equipments.view','members.view','members.add','members.remove','members.change','groups.view','groups.add','groups.remove','groups.change','permissions.view','permissions.add','permissions.remove','permissions.change','premises.view','premises.add','premises.remove','premises.change','equipment_service.view') ON DUPLICATE KEY UPDATE groups=VALUES(groups), permission=VALUES(permission)")
+			if 'members' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS members (id INT NOT NULL AUTO_INCREMENT,login TEXT NOT NULL UNIQUE, password TEXT, groups INT, name TEXT, surname TEXT, patronymic TEXT, PRIMARY KEY (id), FOREIGN KEY (groups) REFERENCES groups(id) ON DELETE SET NULL)')
+				if insert_values:
+					cursor.execute("INSERT INTO members (id,password,login,groups) VALUES(-1,SHA2(CONCAT(?,?),256),?,-1) ON DUPLICATE KEY UPDATE id = VALUES(id), password = VALUES(password), login = VALUES(login), groups = VALUES(groups)",(login,password,login,))
+			if 'premises' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS premises (id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, PRIMARY KEY (id))')
+			if 'public_addresses' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS public_addresses (id INT NOT NULL AUTO_INCREMENT, address CHAR(15) UNIQUE, PRIMARY KEY (id))')
+			if 'local_addresses' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS local_addresses (id INT NOT NULL AUTO_INCREMENT, public_address INT NOT NULL, address CHAR(15) NOT NULL, PRIMARY KEY (id))')
+			if 'equipment_types' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS equipment_types (id INT NOT NULL AUTO_INCREMENT, name TEXT NOT NULL, description TEXT, PRIMARY KEY (id))')
+			if 'equipments' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS equipments (id INT NOT NULL AUTO_INCREMENT, premise INT NOT NULL, type INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), name TEXT NOT NULL, description TEXT, address INT, PRIMARY KEY (id), FOREIGN KEY (premise) REFERENCES premises(id) ON DELETE CASCADE, FOREIGN KEY (type) REFERENCES equipment_types(id) ON DELETE CASCADE, FOREIGN KEY (address) REFERENCES local_addresses(id) ON DELETE SET NULL)')
+			if 'equipment_service' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS equipment_service (equipment INT NOT NULL, member INT, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), commit TEXT NOT NULL, PRIMARY KEY (equipment,date), FOREIGN KEY (member) REFERENCES members(id) ON DELETE SET NULL, FOREIGN KEY (equipment) REFERENCES equipments(id) ON DELETE CASCADE)')
+			if 'equipment_firmwares' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS equipment_firmwares (equipment INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), path TEXT NOT NULL, commit TEXT NOT NULL, CONSTRAINT firmware PRIMARY KEY (equipment,date), FOREIGN KEY (equipment) REFERENCES equipments(id) ON DELETE CASCADE)')
+			if 'equipment_configurations' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS equipment_configurations (equipment INT NOT NULL, date INT(11) NOT NULL DEFAULT UNIX_TIMESTAMP(), path TEXT NOT NULL, commit TEXT NOT NULL, PRIMARY KEY (equipment,date), FOREIGN KEY (equipment) REFERENCES equipments(id) ON DELETE CASCADE)')
+			if 'equipment_links' not in tables:
+				cursor.execute('CREATE TABLE IF NOT EXISTS equipment_links (equipment_from INT NOT NULL, equipment_to INT NOT NULL, PRIMARY KEY (equipment_from,equipment_to), FOREIGN KEY (equipment_from) REFERENCES equipments(id) ON DELETE CASCADE, FOREIGN KEY (equipment_to) REFERENCES equipments(id) ON DELETE CASCADE)')
+	
+	def make_dump(self):
+		path = self.config['dumps']['path']
+		tables = ['permissions', 'groups', 'groups_permissions', 'members', 'premises', 'public_addresses', 'local_addresses', 'equipment_types', 'equipments', 'equipment_service', 'equipment_firmwares', 'equipment_configurations', 'equipment_links']
+		date = datetime.today().strftime('%Y-%m-%d_%H:%M:%S')
+		with open(path+'dump_'+date+'.sql', 'w') as f:
+			with self.cursor() as cursor:
+				for table in tables:
+					cursor.execute(f'SELECT * FROM {table}')
+					rows = cursor.fetchall()
+					for row in rows:
+						fields = ['null' if field is None else repr(field) for field in row]
+						f.write(f"INSERT INTO {table} VALUES ({','.join(fields)});\n")
+	
+	def install_dump(self, dump_file):
+		path = self.config['dumps']['path']
+		with open(path+dump_file,'r') as f:
+			lines = f.readlines()
+		tables = ['permissions', 'groups', 'groups_permissions', 'members', 'premises', 'public_addresses', 'local_addresses', 'equipment_types', 'equipments', 'equipment_service', 'equipment_firmwares', 'equipment_configurations', 'equipment_links']
+		with self.cursor() as cursor:
+			for table in reversed(tables):
+				cursor.execute(f'DROP TABLE IF EXISTS {table}')	
+		self.init_tables(insert_values=False)
+		with self.cursor() as cursor:
+			for line in lines:
+				cursor.execute(line)
 
 with open("config.yml") as f:
 	config = yaml.load(f, Loader=yaml.FullLoader)

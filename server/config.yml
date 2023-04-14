@@ -8,3 +8,7 @@ mariadb:
 admin:
   login: admin
   password: admin
+
+dumps:
+  enabled: true
+  path: './dumps/'

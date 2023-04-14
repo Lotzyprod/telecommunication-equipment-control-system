@@ -3,6 +3,7 @@ from pydantic import BaseModel
 class Token(BaseModel):
 	message: str
 	token: str
+
 class Message(BaseModel):
 	message: str
 
